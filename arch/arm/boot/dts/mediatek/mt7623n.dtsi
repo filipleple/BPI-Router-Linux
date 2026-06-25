@@ -81,6 +81,20 @@
 		power-domains = <&scpsys MT2701_POWER_DOMAIN_VDEC>;
 	};
 
+	/*
+	 * VDEC register block (0x16020000..0x16028fff). Drives /dev/Vcodec for
+	 * the prebuilt MTK VPU userspace via the mtk-vcodec-shim driver. Power
+	 * comes from larb1 (MT2701_POWER_DOMAIN_VDEC + CLK_VDEC_CKGEN/LARB) via
+	 * a PM device link, mirroring the mali/larb0 wiring above. No "interrupts"
+	 * property: the shim polls decode-done (the MT7623 VDEC GIC SPI is
+	 * undocumented). VDEC_SYS @0x16000000 is reached via vdecsys/mmap, not here.
+	 */
+	vcodec: vcodec@16020000 {
+		compatible = "mediatek,mt7623-vcodec-shim";
+		reg = <0 0x16020000 0 0x9000>;
+		mediatek,larb = <&larb1>;
+	};
+
 	larb2: larb@15001000 {
 		compatible = "mediatek,mt7623-smi-larb",
 			     "mediatek,mt2701-smi-larb";

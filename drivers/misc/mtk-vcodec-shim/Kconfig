@@ -1,0 +1,13 @@
+config MTK_VCODEC_SHIM
+	tristate "MediaTek MT7623 /dev/Vcodec shim (prebuilt VPU userspace)"
+	depends on ARCH_MEDIATEK || COMPILE_TEST
+	depends on OF
+	help
+	  Minimal char-device shim that exposes /dev/Vcodec with the ABI the
+	  prebuilt MediaTek armhf VPU userspace (libvcodec_utility.so) expects:
+	  mmap of the VDEC register banks and DMA working buffers, the
+	  _IOW('M', ...) ioctl family, SMI-larb power via a device link, and
+	  poll-based decode completion. Intended for the BananaPi BPI-R2
+	  (MT7623N) hardware video decoder bring-up.
+
+	  If unsure, say N.
