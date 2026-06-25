@@ -949,7 +949,21 @@ function prepare_SD {
 	if [[ -e ./$board.itb ]];then
 		cp ./$board.itb $kerndir/$board.itb
 	fi
-	make modules_install
+	# modules_install must target the build output dir (where .config lives).
+	# ARCH/CROSS_COMPILE/KBUILD_OUTPUT are exported, but pass them explicitly
+	# (as the SD-card path above does) since a bare make here resolves against
+	# the source tree and fails with "include/config/auto.conf ... missing".
+	#
+	# Run a full (incremental) build first so the output dir is complete:
+	# modules_install needs vmlinux.o/Module.symvers (for modpost), modules.order,
+	# modules.builtin and the .ko files. Building only "modules" is not enough --
+	# modpost fails with "vmlinux.o is missing" if vmlinux wasn't built here. The
+	# bare make (default "all" target = vmlinux + image + modules) is a fast no-op
+	# when the dir is already up to date, and rebuilds whatever is missing if not.
+	make ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE KBUILD_OUTPUT=$KBUILD_OUTPUT olddefconfig
+	make -j${numproc} ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE KBUILD_OUTPUT=$KBUILD_OUTPUT
+	make ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE KBUILD_OUTPUT=$KBUILD_OUTPUT \
+		INSTALL_MOD_PATH=$INSTALL_MOD_PATH modules_install
 
 	#Add CryptoDev Module if exists or Blacklist
 	CRYPTODEV="utils/cryptodev/cryptodev-linux/cryptodev.ko"
