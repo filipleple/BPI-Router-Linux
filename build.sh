@@ -960,6 +960,12 @@ function prepare_SD {
 	# modpost fails with "vmlinux.o is missing" if vmlinux wasn't built here. The
 	# bare make (default "all" target = vmlinux + image + modules) is a fast no-op
 	# when the dir is already up to date, and rebuilds whatever is missing if not.
+	#
+	# Match build()'s LOCALVERSION so the modules get the SAME vermagic / uname -r
+	# as the kernel image. Without this, setlocalversion appends a stray "+"
+	# (CONFIG_LOCALVERSION_AUTO=n + LOCALVERSION unset) and modprobe rejects the
+	# modules: "version magic '...-bpi-r2+' should be '...-bpi-r2'".
+	export LOCALVERSION="${gitbranch}"
 	make ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE KBUILD_OUTPUT=$KBUILD_OUTPUT olddefconfig
 	make -j${numproc} ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE KBUILD_OUTPUT=$KBUILD_OUTPUT
 	make ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE KBUILD_OUTPUT=$KBUILD_OUTPUT \
