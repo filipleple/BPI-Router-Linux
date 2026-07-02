@@ -103,6 +103,13 @@ properties:
 
   mali-supply: true
 
+  mediatek,larb:
+    $ref: /schemas/types.yaml#/definitions/phandle
+    description:
+      A phandle to the MediaTek SMI local arbiter (larb) the GPU masters
+      the system bus through. The larb sits in a different power domain
+      than the GPU and must be powered for the GPU to reach the bus.
+
   opp-table:
     type: object
 
@@ -150,6 +157,16 @@ allOf:
     then:
       required:
         - resets
+
+  - if:
+      not:
+        properties:
+          compatible:
+            contains:
+              const: mediatek,mt7623-mali
+    then:
+      properties:
+        mediatek,larb: false
 
 examples:
   - |
