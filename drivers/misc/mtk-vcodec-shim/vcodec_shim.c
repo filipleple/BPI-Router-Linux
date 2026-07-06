@@ -469,10 +469,22 @@ static int vcodec_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, vc);
 	g_vc = vc;
+
+	/* Register the /proc/M4U_device front-end on the same struct device so
+	 * the blob's IOMMU mappings share this driver's dma domain. */
+	ret = vcodec_m4u_init(vc);
+	if (ret) {
+		dev_err(vc->dev, "M4U front-end init failed: %d\n", ret);
+		goto err_misc;
+	}
+
 	dev_info(vc->dev, "/dev/Vcodec ready (vdec@%pa, larb powered)\n",
 		 &pdev->resource[0].start);
 	return 0;
 
+err_misc:
+	g_vc = NULL;
+	misc_deregister(&vc->mdev);
 err_larb:
 	pm_runtime_put(vc->larb_dev);
 	device_link_del(vc->larb_link);
@@ -484,6 +496,7 @@ static void vcodec_remove(struct platform_device *pdev)
 {
 	struct vcodec_shim *vc = platform_get_drvdata(pdev);
 
+	vcodec_m4u_exit();
 	misc_deregister(&vc->mdev);
 	pm_runtime_put(vc->larb_dev);
 	device_link_del(vc->larb_link);
