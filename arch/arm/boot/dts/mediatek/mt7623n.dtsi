@@ -93,6 +93,22 @@
 		compatible = "mediatek,mt7623-vcodec-shim";
 		reg = <0 0x16020000 0 0x9000>;
 		mediatek,larb = <&larb1>;
+
+		/*
+		 * larb1 VDEC master ports (mt2701-larb-port.h flat numbering
+		 * 11,12,14,15,16,17 -- PPWRAP/13 is skipped, matching the port
+		 * enable-list the blob's libm4u drives; see docs/vpu/m4u-notes.md).
+		 * With this present, MTK_IOMMU_V1 attaches an arm_iommu mapping and
+		 * the /proc/M4U_device bridge coalesces the decoder's scattered
+		 * buffers into a single MVA. Remove it to bypass translation
+		 * (contiguous buffers only) and A/B the two paths on the board.
+		 */
+		iommus = <&iommu MT2701_M4U_PORT_VDEC_MC_EXT>,
+			 <&iommu MT2701_M4U_PORT_VDEC_PP_EXT>,
+			 <&iommu MT2701_M4U_PORT_VDEC_AVC_MV_EXT>,
+			 <&iommu MT2701_M4U_PORT_VDEC_PRED_RD_EXT>,
+			 <&iommu MT2701_M4U_PORT_VDEC_PRED_WR_EXT>,
+			 <&iommu MT2701_M4U_PORT_VDEC_VLD_EXT>;
 	};
 
 	larb2: larb@15001000 {
