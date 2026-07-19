@@ -450,6 +450,17 @@ static int vcodec_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
+	/*
+	 * ALLOC_MVA maps a scattered user buffer and requires the IOMMU to
+	 * coalesce it into a single IOVA (nents==1) so the MVA is contiguous
+	 * for the VPU. dma_map_sg() only merges segments up to the device's
+	 * max_seg_size, which defaults to 64KB -- so any buffer larger than
+	 * 64KB (e.g. H.264 work/frame buffers) splits into nents>1 and
+	 * ALLOC_MVA fails with -ENOMEM. Lift the cap to the full 32-bit space
+	 * so the whole buffer merges into one IOVA regardless of size.
+	 */
+	dma_set_max_seg_size(vc->dev, DMA_BIT_MASK(32));
+
 	vc->vdec_base = devm_platform_ioremap_resource(pdev, 0);
 	if (IS_ERR(vc->vdec_base))
 		return PTR_ERR(vc->vdec_base);
