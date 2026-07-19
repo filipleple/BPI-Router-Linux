@@ -300,7 +300,7 @@ static int mtk_iommu_v1_attach_device(struct iommu_domain *domain, struct device
 
 	/* Only allow the domain created internally. */
 	mtk_mapping = data->mapping;
-	if (mtk_mapping->domain != domain)
+	if (!mtk_mapping || mtk_mapping->domain != domain)
 		return 0;
 
 	if (!data->m4u_dom) {
@@ -401,9 +401,7 @@ static const struct iommu_ops mtk_iommu_v1_ops;
 static int mtk_iommu_v1_create_mapping(struct device *dev,
 				       const struct of_phandle_args *args)
 {
-	struct mtk_iommu_v1_data *data;
 	struct platform_device *m4updev;
-	struct dma_iommu_mapping *mtk_mapping;
 	int ret;
 
 	if (args->args_count != 1) {
@@ -427,22 +425,15 @@ static int mtk_iommu_v1_create_mapping(struct device *dev,
 		put_device(&m4updev->dev);
 	}
 
-	ret = iommu_fwspec_add_ids(dev, args->args, 1);
-	if (ret)
-		return ret;
-
-	data = dev_iommu_priv_get(dev);
-	mtk_mapping = data->mapping;
-	if (!mtk_mapping) {
-		/* MTK iommu support 4GB iova address space. */
-		mtk_mapping = arm_iommu_create_mapping(dev, 0, 1ULL << 32);
-		if (IS_ERR(mtk_mapping))
-			return PTR_ERR(mtk_mapping);
-
-		data->mapping = mtk_mapping;
-	}
-
-	return 0;
+	/*
+	 * The shared dma_iommu_mapping cannot be created here:
+	 * arm_iommu_create_mapping() allocates the paging domain through the
+	 * client device (iommu_paging_domain_alloc() rejects any device with
+	 * no dev->iommu->iommu_dev), and the core only sets iommu_dev after
+	 * ->probe_device() returns. It is created in ->probe_finalize()
+	 * instead, which runs after that.
+	 */
+	return iommu_fwspec_add_ids(dev, args->args, 1);
 }
 
 /*
@@ -545,6 +536,17 @@ static void mtk_iommu_v1_probe_finalize(struct device *dev)
 
 	data        = dev_iommu_priv_get(dev);
 	mtk_mapping = data->mapping;
+
+	if (!mtk_mapping) {
+		/* MTK iommu support 4GB iova address space. */
+		mtk_mapping = arm_iommu_create_mapping(dev, 0, 1ULL << 32);
+		if (IS_ERR(mtk_mapping)) {
+			dev_err(dev, "Can't create IOMMU mapping (%ld) - DMA-OPS will not work\n",
+				PTR_ERR(mtk_mapping));
+			return;
+		}
+		data->mapping = mtk_mapping;
+	}
 
 	err = arm_iommu_attach_device(dev, mtk_mapping);
 	if (err)
